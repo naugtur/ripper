@@ -1,7 +1,7 @@
 /*!
  * Ripper.js v0.1
- * Copyright 2012, Zbigniew Tenerowicz
- * MIT License
+ * Copyright 2012, Zbigniew Tenerowicz, naugtur.pl
+ * MIT License, see license.txt
  */
 
 var Ripper = function(S) {
