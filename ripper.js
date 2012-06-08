@@ -78,16 +78,20 @@ var Ripper = function(S) {
 
       var defaultsStore = {};
 
+      //change aaa-bbb into aaaBbb
+      function camelize(prop) {
+        var rep = function(a, b) {
+            return b.toUpperCase();
+          };
+        return prop.replace(/\-([a-z])/g, rep);
+      };
+
       function getStyleObject(dom) {
         var style, returns = {};
         if (window.getComputedStyle) {
-          var camelize = function(a, b) {
-              return b.toUpperCase();
-            };
           style = window.getComputedStyle(dom, null);
           for (var i = 0, l = style.length; i < l; i += 1) {
             var prop = style[i],
-              camel = prop.replace(/\-([a-z])/g, camelize),
               val = style.getPropertyValue(prop);
             returns[prop] = val;
           }
@@ -96,6 +100,7 @@ var Ripper = function(S) {
         if (style = dom.currentStyle) {
           for (var prop in style) {
             returns[prop] = style[prop];
+            window.keys.com[prop] = 1;
           }
           return returns;
         }
@@ -103,6 +108,7 @@ var Ripper = function(S) {
           for (var prop in style) {
             if (typeof style[prop] != 'function') {
               returns[prop] = style[prop];
+              window.keys.com[prop] = 1;
             };
           };
           return returns;
@@ -112,9 +118,25 @@ var Ripper = function(S) {
 
       }
 
+      //Single instance sandbox iframe
+      var getSandbox = (function() {
+        var ifr, iframeSandbox = false;
+        return function() {
+          if (iframeSandbox) {
+            return iframeSandbox;
+          } else {
+            ifr = document.createElement('iframe');
+            ifr.style.display = 'none';
+            document.documentElement.appendChild(ifr);
+            iframeSandbox = ifr.contentDocument.body;
+            return iframeSandbox;
+          }
+        };
+      })();
+
 
       //memoized function to get the default style of an element
-      //TODO prefetch styles for some form elements eg. putting OPTION in SELECT
+      //TODO [not sure anymore] prefetch styles for some form elements eg. putting OPTION in SELECT
 
       function memDefaults(tag, type) {
         var key = tag + type;
@@ -122,13 +144,14 @@ var Ripper = function(S) {
           return defaultsStore[key];
         } else {
           //get styles for defaults
-          var e = document.createElement(tag);
+          var sandBox = getSandbox(),
+            e = document.createElement(tag);
           type && (e.type = type);
           e.style.visibility = 'hidden';
-          document.documentElement.appendChild(e);
+          sandBox.appendChild(e);
           defaultsStore[key] = getStyleObject(e);
           defaultsStore[key].visibility = 'visible';
-          document.documentElement.removeChild(e);
+          sandBox.removeChild(e);
           return defaultsStore[key];
         }
       }
@@ -162,7 +185,8 @@ var Ripper = function(S) {
 
 
       return {
-        get: getDiff
+        get: getDiff,
+        camelize:camelize
       }
 
     })();
@@ -172,7 +196,9 @@ var Ripper = function(S) {
 
       var z = {},
         dictionary = ['color', 'webkit', 'border', 'font', 'text', 'origin', 'left', 'width', 'right', 'bottom', 'size', 'height', 'family', 'padding', 'transform', 'perspective', 'align', 'none', 'type', 'option', 'background', 'value', 'collapse', 'margin', 'outline', 'display', 'serif', 'sans', 'solid', 'spacing', 'cursor', 'href', 'Arial', 'auto', 'position', 'block', 'vertical', 'Tahoma', 'span', 'name', 'input', 'line', 'default', 'float', 'label', 'Helvetica', 'hidden', 'horizontal', 'repeat', 'center', 'absolute', 'Verdana', 'recaptcha', 'overflow', 'image', 'relative'],
+        //some popular longer words in html and css
         keys = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''); //71       
+      //naive compression for html and CSS 
 
       function compress(text) {
         var result;
@@ -183,12 +209,14 @@ var Ripper = function(S) {
         return result
       }
 
+      //decompression
+
       function decompress(text) {
-        var result;
+        var result = text;
         for (var i = 0, l = dictionary.length; i < l; i += 1) {
           result.replace(RegExp('~' + keys[i], 'g'), dictionary[i]);
         }
-        result.replace(/~~/g,'~');
+        result.replace(/~~/g, '~');
         return result
       }
 
@@ -202,7 +230,7 @@ var Ripper = function(S) {
     var LZW = (function() {
       //setup for basic dictionary
       var rootDict = 382;
-      //good characters: ((n>31 && n<127)||n>=160) //maby later?
+      //good characters: ((n>31 && n<127)||n>=160) //TODO later?
 
       function compress(uncompressed) {
         // Build the dictionary.
@@ -318,7 +346,9 @@ var Ripper = function(S) {
     function rip(node) {
       var htmlContent, rippedData;
 
-      htmlContent = node.innerHTML.replace(/(style|class)=("[^"]*")|('[^']*')/gi, '').replace(/\s+/g, ' '); //no need for style and class; html-ignore whitespace
+      //no need for style and class; html-ignore whitespace
+      htmlContent = node.innerHTML.replace(/(style|class)=("[^"]*")|('[^']*')/gi, '').replace(/\s+/g, ' ');
+
       rippedData = {
         html: htmlContent,
         css: {}
@@ -331,10 +361,10 @@ var Ripper = function(S) {
 
       var fragment = JSON.stringify(rippedData);
       //console.log(fragment);
-      if(S.heuristic){
-      fragment=Heuristic.compress(fragment);
+      if (S.heuristic) {
+        fragment = Heuristic.compress(fragment);
       }
-      
+
       var compressed = LZW.compress(fragment, M.makeConverter(S.numberLength));
 
       return compressed;
@@ -343,16 +373,17 @@ var Ripper = function(S) {
 
     function put(node, data) {
       var obj = LZW.decompress(data, M.reverseConverter, S.numberLength);
-      if(S.heuristic){
-      obj=Heuristic.compress(obj);
+      if (S.heuristic) {
+        obj = Heuristic.decompress(obj);
       }
       obj = JSON.parse(obj);
       node.innerHTML = obj.html;
       //set css back, recursively
       makeRecursiveTraverser(function(e, id) {
-        var css = obj.css[id];
-        for (var i in css) {
-          e.style[i] = css[i];
+        var i,css = obj.css[id];
+        for (var p in css) {
+          i=CSS.camelize(p);
+          e.style[i] = css[p];
         }
       })(node, '', 1);
     }
