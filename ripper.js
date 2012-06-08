@@ -10,19 +10,23 @@ var Ripper = function(S) {
     S || (S = {});
     S.dictionary || (S.dictionary = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!~*;:/$,-_");
     S.numberLength || (S.numberLength = 2);
+    S.heuristic || (S.heuristic = false);
     //------------------------------------------------------------------- /Math
     var M = (function() {
       var c = (S.dictionary).split(""),
         b = S.dictionary.length;
-        
+
       //creates a converter function that translates numbers to base(dictionary.length) which can be more than base64
+
       function makeConverter(l) { //factory for a l-character converter
         var max;
 
         if (l === 2) { //case of 2 chars - unrolled for performance
           max = b * b;
           return function(n) {
-            if(typeof(n)!=='number'){return ''}
+            if (typeof(n) !== 'number') {
+              return ''
+            }
             var s = "";
             if (n >= max) {
               throw 'Number too big to convert. Use bigger dictionary or numberLength.';
@@ -35,7 +39,9 @@ var Ripper = function(S) {
         } else {
           max = Math.pow(b, l); //init once
           return function(n) {
-            if(typeof(n)!=='number'){return ''}
+            if (typeof(n) !== 'number') {
+              return ''
+            }
             var s = "";
             if (n >= max) {
               throw 'Number too big to convert. Use bigger dictionary or numberLength.';
@@ -50,7 +56,6 @@ var Ripper = function(S) {
       }
 
       //for any length of input converts it to proper integer based on dictionary
-
 
       function reverseConverter(x) {
         var ret = 0;
@@ -162,13 +167,43 @@ var Ripper = function(S) {
 
     })();
 
+    //------------------------------------------------------------------- /Heuristic Compress
+    var Heuristic = (function() {
+
+      var z = {},
+        dictionary = ['color', 'webkit', 'border', 'font', 'text', 'origin', 'left', 'width', 'right', 'bottom', 'size', 'height', 'family', 'padding', 'transform', 'perspective', 'align', 'none', 'type', 'option', 'background', 'value', 'collapse', 'margin', 'outline', 'display', 'serif', 'sans', 'solid', 'spacing', 'cursor', 'href', 'Arial', 'auto', 'position', 'block', 'vertical', 'Tahoma', 'span', 'name', 'input', 'line', 'default', 'float', 'label', 'Helvetica', 'hidden', 'horizontal', 'repeat', 'center', 'absolute', 'Verdana', 'recaptcha', 'overflow', 'image', 'relative'],
+        keys = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''); //71       
+
+      function compress(text) {
+        var result;
+        result = text.replace(/~/g, '~~'); //Not too often I guess
+        for (var i = 0, l = dictionary.length; i < l; i += 1) {
+          result.replace(RegExp(dictionary[i], 'g'), '~' + keys[i]);
+        }
+        return result
+      }
+
+      function decompress(text) {
+        var result;
+        for (var i = 0, l = dictionary.length; i < l; i += 1) {
+          result.replace(RegExp('~' + keys[i], 'g'), dictionary[i]);
+        }
+        result.replace(/~~/g,'~');
+        return result
+      }
+
+      return {
+        compress: compress,
+        decompress: decompress
+      }
+    })()
+
     //------------------------------------------------------------------- /LZW
     var LZW = (function() {
       //setup for basic dictionary
-      var rootDict=382;
+      var rootDict = 382;
       //good characters: ((n>31 && n<127)||n>=160) //maby later?
-        
-      
+
       function compress(uncompressed) {
         // Build the dictionary.
         var i, dictionary = {},
@@ -181,7 +216,9 @@ var Ripper = function(S) {
 
         for (i = 0; i < uncompressed.length; i += 1) {
           c = uncompressed.charAt(i);
-          if(c.charCodeAt(0)>rootDict){continue;}
+          if (c.charCodeAt(0) > rootDict) {
+            continue;
+          }
           wc = w + c;
           if (dictionary[wc]) {
             w = wc;
@@ -259,7 +296,7 @@ var Ripper = function(S) {
 
     function makeRecursiveTraverser(callback) {
       var action = callback,
-        cV = M.makeConverter(S.numberLength);
+        cV = M.makeConverter(2);
 
       function recur(e, n, k, u) {
         var x, id = n + '' + cV(k);
@@ -279,8 +316,11 @@ var Ripper = function(S) {
     }
 
     function rip(node) {
-      var rippedData = {
-        html: node.innerHTML.replace(/\s/g,' ').replace(/[ ]+/g,' '), //html-ignore whitespace
+      var htmlContent, rippedData;
+
+      htmlContent = node.innerHTML.replace(/(style|class)=("[^"]*")|('[^']*')/gi, '').replace(/\s+/g, ' '); //no need for style and class; html-ignore whitespace
+      rippedData = {
+        html: htmlContent,
         css: {}
       };
       //store CSS recursively
@@ -290,10 +330,12 @@ var Ripper = function(S) {
 
 
       var fragment = JSON.stringify(rippedData);
-      console.log(fragment);
-
+      //console.log(fragment);
+      if(S.heuristic){
+      fragment=Heuristic.compress(fragment);
+      }
+      
       var compressed = LZW.compress(fragment, M.makeConverter(S.numberLength));
-      console.log(compressed, compressed.length, fragment.length);
 
       return compressed;
 
@@ -301,6 +343,9 @@ var Ripper = function(S) {
 
     function put(node, data) {
       var obj = LZW.decompress(data, M.reverseConverter, S.numberLength);
+      if(S.heuristic){
+      obj=Heuristic.compress(obj);
+      }
       obj = JSON.parse(obj);
       node.innerHTML = obj.html;
       //set css back, recursively
@@ -315,9 +360,9 @@ var Ripper = function(S) {
     return {
       copy: rip,
       paste: put,
-      test:function(fragment){
-        var test=LZW.compress(fragment, M.makeConverter(S.numberLength));
-        return [test,LZW.decompress(test, M.reverseConverter, S.numberLength)];
+      test: function(fragment) {
+        var test = LZW.compress(fragment, M.makeConverter(S.numberLength));
+        return [test, LZW.decompress(test, M.reverseConverter, S.numberLength)];
       }
     };
 
