@@ -7,7 +7,7 @@ The `copy(node)` method serializes all content of given DOM node and CSS style s
 
 The `paste(node,data)` method replace content of given node with deserialized content from the `data` string
 
-Usage:
+##Usage:
 
     //without setup, default dictionary will be used
     var ripper=Ripper();
@@ -22,6 +22,8 @@ Usage:
     //load data from the server on another page
     ripper.paste(whereToDOMnode,data);
 
+##Demo
 
+http://naugtur.github.com/ripper/
 
 
