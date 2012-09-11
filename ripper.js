@@ -160,27 +160,32 @@ var Ripper = function(S) {
       // e is the element
 
       function getDiff(e) {
-        var s = getStyleObject(e),
+        var styles = getStyleObject(e),
           nn = e.nodeName,
-          d, r = false; //result not empty
+          defaults, r = false; //result not empty
         if (nn === 'INPUT') {
-          d = memDefaults(nn, e.getAttribute('type'));
+          defaults = memDefaults(nn, e.getAttribute('type'));
         } else {
-          d = memDefaults(nn, '');
+          defaults = memDefaults(nn, '');
         }
 
-        for (var i in d) {
-          if (d.hasOwnProperty(i)) {
-            if (s[i] === d[i]) {
-              delete s[i];
+        for (var i in defaults) {
+          if (defaults.hasOwnProperty(i)) {
+            if (styles[i] === d[i]) {
+              delete styles[i];
             } else {
+                if(i.substr(0,1)==='-'){
+            		styles[i.replace(/^-[a-z]*-/,'')]=styles[i];
+            		delete(styles[i]);
+            	}
               //something remains
               r = true;
+              
             }
           }
         }
 
-        return (r) ? s : {};
+        return (r) ? styles : {};
       }
 
 
@@ -195,7 +200,7 @@ var Ripper = function(S) {
     var Heuristic = (function() {
 
       var z = {},
-        dictionary = ['color', 'webkit', 'border', 'font', 'text', 'origin', 'left', 'width', 'right', 'bottom', 'size', 'height', 'family', 'padding', 'transform', 'perspective', 'align', 'none', 'type', 'option', 'background', 'value', 'collapse', 'margin', 'outline', 'display', 'serif', 'sans', 'solid', 'spacing', 'cursor', 'href', 'Arial', 'auto', 'position', 'block', 'vertical', 'Tahoma', 'span', 'name', 'input', 'line', 'default', 'float', 'label', 'Helvetica', 'hidden', 'horizontal', 'repeat', 'center', 'absolute', 'Verdana', 'recaptcha', 'overflow', 'image', 'relative'],
+        dictionary = ['color', 'div', 'border', 'font', 'text', 'origin', 'left', 'width', 'right', 'bottom', 'size', 'height', 'family', 'padding', 'transform', 'perspective', 'align', 'none', 'type', 'option', 'background', 'value', 'collapse', 'margin', 'outline', 'display', 'serif', 'sans', 'solid', 'spacing', 'cursor', 'href', 'Arial', 'auto', 'position', 'block', 'vertical', 'Tahoma', 'span', 'name', 'input', 'line', 'default', 'float', 'label', 'Helvetica', 'hidden', 'horizontal', 'repeat', 'center', 'absolute', 'Verdana', 'recaptcha', 'overflow', 'image', 'relative'],
         //some popular longer words in html and css
         keys = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''); //71       
       //naive compression for html and CSS 
