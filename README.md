@@ -22,6 +22,20 @@ The `paste(node,data)` method replace content of given node with deserialized co
     //load data from the server on another page
     ripper.paste(whereToDOMnode,data);
 
+##Avaliable options
+
+ dictionary - characters avaliable for output, default = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!~*;:/$,-_"
+ numberLength - length of a number in base{dictionary.length} encoding, default = 2
+ heuristic - use heuristic compression before LZW, default = false
+ keepJS - when set to false ripper removes all javascript from ripped content, default = false
+
+You can also pass a preprocessing function as a second argument to `.copy()`, eg.
+
+    ripper.copy(node,function(domCopy){
+    	//modify domCopy before it gets serialized.
+    	//original document is not affected
+    	});
+
 ##Demo
 
 http://naugtur.github.com/ripper/
