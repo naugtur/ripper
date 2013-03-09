@@ -71,8 +71,8 @@ document.getElementById('go').addEventListener('click', function(e){
   
   
   try{
-  framebody.innerHTML='<div></div>';
-  ripper.paste(framebody.getElementsByTagName('div')[0],data);
+  framebody.innerHTML='';
+  ripper.paste(data,framebody);
   
   document.getElementById('code').value=document.getElementById('code').value.length;
   alert('should be ready');

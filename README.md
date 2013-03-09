@@ -20,7 +20,8 @@ The `paste(node,data)` method replace content of given node with deserialized co
     //send data to the server
 
     //load data from the server on another page
-    ripper.paste(whereToDOMnode,data);
+    ripper.paste(data,domNode);
+    //domNode is optional. ripper.paste will return a newly created node anyway
 
 ##Avaliable options
 

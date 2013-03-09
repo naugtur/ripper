@@ -362,7 +362,7 @@ var Ripper = function(S) {
             preprocess(tmpdom);
         }
     
-    if(S.keepJS){
+   if(S.keepJS){
         //no need for style and class
         htmlContent = tmpdom.innerHTML.replace(/(style)=("[^"<]*")|('[^'<]*')/gi, '')
     }else{
@@ -400,12 +400,20 @@ var Ripper = function(S) {
 
   }
 
-  function put(node, data) {
-    var obj = LZW.decompress(data, M.reverseConverter, S.numberLength);
+  function put(data,target) {
+    var node,findTR,nodeName = 'div',
+        obj = LZW.decompress(data, M.reverseConverter, S.numberLength);
     if (S.heuristic) {
       obj = Heuristic.decompress(obj);
     }
     obj = JSON.parse(obj);
+    //if code starts from tr, it needs a table tag to work
+    findTR = obj.html.substring(0,5);
+    if(findTR.indexOf('<tr')>-1 || findTR.indexOf('<th')>-1 || findTR.indexOf('<td')>-1 ){
+      nodeName = 'table';
+    }
+
+    node = document.createElement(nodeName);
     node.innerHTML = obj.html;
     //set css back, recursively
     makeRecursiveTraverser(function(e, id) {
@@ -418,8 +426,14 @@ var Ripper = function(S) {
         }
       }
     })(node, '', 1);
-  }
+    
+    if(target){
+      target.appendChild(node);
+    }
+    return node;
 
+  }
+  
   return {
     copy: rip,
     paste: put,
