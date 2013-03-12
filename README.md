@@ -5,7 +5,7 @@ Copy and compress fragments of html document and insert to another document pres
 
 The `copy(node)` method serializes all content of given DOM node and CSS style set on elements inside to a string containing only letters provided as the dictionary. The default dictionary contains all characters that are allowed in HTTP GET request.
 
-The `paste(node,data)` method replace content of given node with deserialized content from the `data` string
+The `paste(data,node)` method creates a child in a given node with deserialized content from the `data` string
 
 ##Usage:
 
