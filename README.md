@@ -25,10 +25,10 @@ The `paste(data,node)` method creates a child in a given node with deserialized 
 
 ##Avaliable options
 
- dictionary - characters avaliable for output, default = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!~*;:/$,-_"
- numberLength - length of a number in base{dictionary.length} encoding, default = 2
- heuristic - use heuristic compression before LZW, default = false
- keepJS - when set to false ripper removes all javascript from ripped content, default = false
+  - dictionary - characters avaliable for output, default = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!~*;:/$,-_"
+  - numberLength - length of a number in base{dictionary.length} encoding, default = 2
+  - heuristic - use heuristic compression before LZW, default = false
+  - keepJS - when set to false ripper removes all javascript from ripped content, default = false
 
 You can also pass a preprocessing function as a second argument to `.copy()`, eg.
 
