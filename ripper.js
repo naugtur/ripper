@@ -77,16 +77,49 @@ var Ripper = function(S) {
   //------------------------------------------------------------------- /CSS
   var CSS = (function() {
 
-    var defaultsStore = {};
+    var defaultsStore = {}, prefix;
+    
+    function getVendorPrefix() {
+      if (prefix) return prefix;
+
+      var regex = /^(Moz|Webkit|Khtml|O|ms)(?=[A-Z])/;
+
+      var someScript = document.getElementsByTagName('script')[0];
+
+      for(var prop in someScript.style) {
+        if(regex.test(prop)) {
+          // test is faster than match, so it's better to perform
+          // that on the lot and match only when necessary
+          return prefix = prop.match(regex)[0];
+        }
+      }
+
+      // Nothing found so far? Webkit does not enumerate over the CSS properties of the style object.
+      // However (prop in style) returns the correct value, so we'll have to test for
+      // the precence of a specific property
+      if('WebkitOpacity' in someScript.style) return prefix = 'Webkit';
+      if('KhtmlOpacity' in someScript.style) return prefix = 'Khtml';
+
+      return prefix = '';
+    }
+    
+    //replace -rr- prefix to the one used by current browser, or to optionally specified one
+    function prefixify(value, prefix) {
+      if (typeof prefix === "undefined") {
+        prefix = '-' + getVendorPrefix().toLowerCase() + '-';
+      }
+      return value.replace(/(^|[\s,])-rr-/, prefix);
+    }
 
     //change aaa-bbb into aaaBbb
     function camelize(prop) {
+      prop = prefixify(prop, getVendorPrefix()+'-'); // we can't use -prefix- notation here, because in JS side one of the prefixes starts with lowercase. It's "ms" - what a surprise!
       var rep = function(a, b) {
         return b.toUpperCase();
       };
       return prop.replace(/\-([a-z])/g, rep);
     };
-
+    
     function getStyleObject(dom) {
       var style, returns = {};
       if (window.getComputedStyle) {
@@ -168,14 +201,15 @@ var Ripper = function(S) {
       } else {
         defaults = memDefaults(nn, '');
       }
-
+      
       for (var i in defaults) {
         if (defaults.hasOwnProperty(i)) {
           if (styles[i] === defaults[i]) {
             delete styles[i];
           } else {
+            styles[i]=prefixify(styles[i], '-rr-');
             if(i.substr(0,1)==='-'){
-              styles[i.replace(/^-[a-z]*-/,'')]=styles[i];
+              styles[i.replace(/^-[a-z]*-/,'-rr-')]=styles[i];
               delete(styles[i]);
             }
             //something remains
@@ -196,7 +230,8 @@ var Ripper = function(S) {
 
     return {
       get: getDiff,
-      camelize:camelize
+      camelize:camelize,
+      prefixify: prefixify
     }
 
   })();
@@ -415,12 +450,14 @@ var Ripper = function(S) {
 
     node = document.createElement(nodeName);
     node.innerHTML = obj.html;
+    //console.log(obj);
     //set css back, recursively
     makeRecursiveTraverser(function(e, id) {
       var i,css = obj.css[id];
       for (var p in css) {
         i=CSS.camelize(p);
-        e.style[i] = css[p];
+        e.style[i] = CSS.prefixify(css[p]);
+        //console.log(p,i,css[p],CSS.prefixify(css[p]));
         if(i==='float'){
             e.style['cssFloat'] = css[p];
         }
