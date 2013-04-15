@@ -80,17 +80,18 @@ var Ripper = function(S) {
     var defaultsStore = {}, prefix;
     
     function getVendorPrefix() {
-      if (prefix) return prefix;
+      if (prefix) {
+        return prefix;
+      }
 
-      var regex = /^(Moz|Webkit|Khtml|O|ms)(?=[A-Z])/;
-
-      var someScript = document.getElementsByTagName('script')[0];
+      var someScript = document.getElementsByTagName('script')[0],
+          pfxRegex = /^(Moz|Webkit|Khtml|O|ms)(?=[A-Z])/;
 
       for(var prop in someScript.style) {
-        if(regex.test(prop)) {
+        if(pfxRegex.test(prop)) {
           // test is faster than match, so it's better to perform
           // that on the lot and match only when necessary
-          return prefix = prop.match(regex)[0];
+          return prefix = prop.match(pfxRegex)[0];
         }
       }
 
@@ -329,7 +330,8 @@ var Ripper = function(S) {
           if (k === dictSize) {
             entry = w + w.charAt(0);
           } else {
-            throw "Unexpected character in decompression";
+            console.log('Unexpected character in decompression');
+                    //throw "Unexpected character in decompression";
             return;
           }
         }
@@ -387,9 +389,9 @@ var Ripper = function(S) {
     }
     return recur;
   }
-
-  function rip(node,preprocess) {
-    var htmlContent, rippedData, tmpdom, scripts;
+  
+  function mirror(node,preprocess,cssSkipped){
+      var htmlContent, tmpdom, scripts;
 
     tmpdom = document.createElement(node.nodeName);
     tmpdom.innerHTML = node.innerHTML;
@@ -399,7 +401,9 @@ var Ripper = function(S) {
     
    if(S.keepJS){
         //no need for style and class
-        htmlContent = tmpdom.innerHTML.replace(/(style)=("[^"<]*")|('[^'<]*')/gi, '')
+        if(cssSkipped){
+            htmlContent = tmpdom.innerHTML.replace(/(style)=("[^"<]*")|('[^'<]*')/gi, '');
+        }
     }else{
         scripts = tmpdom.getElementsByTagName('script');
         var i = scripts.length;
@@ -407,21 +411,36 @@ var Ripper = function(S) {
           scripts[i].parentNode.removeChild(scripts[i]);
         }
         //no need for style and class, drop events
-        htmlContent = tmpdom.innerHTML.replace(/(style|on[^ =]*)=("[^"<]*")|('[^'<]*')/gi, '');
+        if(cssSkipped){
+            htmlContent = tmpdom.innerHTML.replace(/(style|on[^ =]*)=("[^"<]*")|('[^'<]*')/gi, '');
+        }else{
+           htmlContent = tmpdom.innerHTML.replace(/(on[^ =]*)=("[^"<]*")|('[^'<]*')/gi, ''); 
+        }
     }
 
     //; ignore whitespace
     htmlContent = htmlContent.replace(/\s+/g, ' ');
+    
+    return htmlContent;
+      
+  }
+  
+
+  function rip(node,preprocess,skipCSS) {
+    var htmlContent, rippedData;
+    
+    htmlContent = mirror(node,preprocess,skipCSS);
 
     rippedData = {
       html: htmlContent,
       css: {}
     };
-    //store CSS recursively
-    makeRecursiveTraverser(function(e, id) {
-      rippedData.css[id] = CSS.get(e);
-    })(node, '', 1);
-
+    if(!skipCSS){
+        //store CSS recursively
+        makeRecursiveTraverser(function(e, id) {
+          rippedData.css[id] = CSS.get(e);
+        })(node, '', 1);
+    }
 
     var fragment = JSON.stringify(rippedData);
     //console.log(fragment);
@@ -438,6 +457,7 @@ var Ripper = function(S) {
   function put(data,target) {
     var node,findTR,nodeName = 'div',
         obj = LZW.decompress(data, M.reverseConverter, S.numberLength);
+    if(!obj){ return; }
     if (S.heuristic) {
       obj = Heuristic.decompress(obj);
     }
