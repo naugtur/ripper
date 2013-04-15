@@ -462,13 +462,17 @@ var Ripper = function(S) {
       obj = Heuristic.decompress(obj);
     }
     obj = JSON.parse(obj);
-    //if code starts from tr, it needs a table tag to work
-    findTR = obj.html.substring(0,5);
-    if(findTR.indexOf('<tr')>-1 || findTR.indexOf('<th')>-1 || findTR.indexOf('<td')>-1 ){
-      nodeName = 'table';
+    
+    if(target){
+      node=target;
+    }else{
+      //if code starts from tr, it needs a table tag to work
+      findTR = obj.html.substring(0,5);
+      if(findTR.indexOf('<tr')>-1 || findTR.indexOf('<th')>-1 || findTR.indexOf('<td')>-1 ){
+        nodeName = 'table';
+      }
+      node = document.createElement(nodeName);
     }
-
-    node = document.createElement(nodeName);
     node.innerHTML = obj.html;
     //console.log(obj);
     //set css back, recursively
@@ -484,9 +488,6 @@ var Ripper = function(S) {
       }
     })(node, '', 1);
     
-    if(target){
-      target.appendChild(node);
-    }
     return node;
 
   }
@@ -494,6 +495,10 @@ var Ripper = function(S) {
   return {
     copy: rip,
     paste: put,
+    tools: {
+      M: M,
+      makeRecursiveTraverser: makeRecursiveTraverser
+    },
     test: function(fragment) {
       var test = LZW.compress(fragment, M.makeConverter(S.numberLength));
       return [test, LZW.decompress(test, M.reverseConverter, S.numberLength)];
