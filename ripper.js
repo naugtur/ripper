@@ -400,8 +400,8 @@ var Ripper = function(S) {
         }
     
    if(S.keepJS){
-        //no need for style and class
         if(cssSkipped){
+            //no need for style and class
             htmlContent = tmpdom.innerHTML.replace(/(style)=("[^"<]*")|('[^'<]*')/gi, '');
         }
     }else{
@@ -410,11 +410,11 @@ var Ripper = function(S) {
         while (i--) {
           scripts[i].parentNode.removeChild(scripts[i]);
         }
-        //no need for style and class, drop events
         if(cssSkipped){
-            htmlContent = tmpdom.innerHTML.replace(/(style|on[^ =]*)=("[^"<]*")|('[^'<]*')/gi, '');
+          htmlContent = tmpdom.innerHTML.replace(/(on[^ =]*)=("[^"<]*")|('[^'<]*')/gi, ''); 
         }else{
-           htmlContent = tmpdom.innerHTML.replace(/(on[^ =]*)=("[^"<]*")|('[^'<]*')/gi, ''); 
+          //no need for style and class, drop events
+          htmlContent = tmpdom.innerHTML.replace(/(style|on[^ =]*)=("[^"<]*")|('[^'<]*')/gi, '');
         }
     }
 
