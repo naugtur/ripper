@@ -39,10 +39,12 @@ You can also pass a preprocessing function as a second argument to `.copy()`, eg
 
 skipCSS - if true, css is not mirrored (it actually copies just the HTML and compresses it then). Useful when grabbing whole document.
 
+##Unit tests
 
+http://naugtur.github.io/ripper/testrunner.html
 
 ##Demo
 
-http://naugtur.github.com/ripper/
+http://naugtur.github.io/ripper/
 
 
