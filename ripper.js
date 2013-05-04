@@ -330,9 +330,7 @@ var Ripper = function(S) {
           if (k === dictSize) {
             entry = w + w.charAt(0);
           } else {
-            console.log('Unexpected character in decompression');
-                    //throw "Unexpected character in decompression";
-            return;
+            throw "Unexpected character in decompression";
           }
         }
 
@@ -354,10 +352,14 @@ var Ripper = function(S) {
       },
       decompress: function(data, dV, chunkSize) {
         //split into chunks of characters
-        var tmp = [];
+        var tmp = [],val;
         data = data.split('');
         while (data.length) {
-          tmp[tmp.length] = dV(data.splice(0, chunkSize).join(''));
+          val = dV(data.splice(0, chunkSize).join(''));
+          if(val<32){ //nothing less than space makes sense anyway
+            throw "Unexpected entity in decoding";
+          }
+          tmp[tmp.length] = val;
         }
 
         return decompress(tmp);
@@ -399,10 +401,12 @@ var Ripper = function(S) {
             preprocess(tmpdom);
         }
     
+    htmlContent = tmpdom.innerHTML;
+
    if(S.keepJS){
         if(cssSkipped){
             //no need for style and class
-            htmlContent = tmpdom.innerHTML.replace(/(style)=("[^"<]*")|('[^'<]*')/gi, '');
+            htmlContent = htmlContent.replace(/(style)=("[^"<]*")|('[^'<]*')/gi, '');
         }
     }else{
         scripts = tmpdom.getElementsByTagName('script');
@@ -411,10 +415,10 @@ var Ripper = function(S) {
           scripts[i].parentNode.removeChild(scripts[i]);
         }
         if(cssSkipped){
-          htmlContent = tmpdom.innerHTML.replace(/(on[^ =]*)=("[^"<]*")|('[^'<]*')/gi, ''); 
+          htmlContent = htmlContent.replace(/(on[^ =]*)=("[^"<]*")|('[^'<]*')/gi, ''); 
         }else{
           //no need for style and class, drop events
-          htmlContent = tmpdom.innerHTML.replace(/(style|on[^ =]*)=("[^"<]*")|('[^'<]*')/gi, '');
+          htmlContent = htmlContent.replace(/(style|on[^ =]*)=("[^"<]*")|('[^'<]*')/gi, '');
         }
     }
 
@@ -454,14 +458,18 @@ var Ripper = function(S) {
 
   }
 
-  function put(data,target) {
-    var node,findTR,nodeName = 'div',
-        obj = LZW.decompress(data, M.reverseConverter, S.numberLength);
-    if(!obj){ return; }
+  function extract(data){
+    var obj = LZW.decompress(data, M.reverseConverter, S.numberLength);
     if (S.heuristic) {
       obj = Heuristic.decompress(obj);
     }
     obj = JSON.parse(obj);
+    return obj;
+  }
+
+  function put(data,target) {
+    var node,findTR,nodeName = 'div',
+    obj = extract(data);
     
     if(target){
       node=target;
@@ -496,10 +504,11 @@ var Ripper = function(S) {
     copy: rip,
     paste: put,
     tools: {
+      extract:extract,
       M: M,
       makeRecursiveTraverser: makeRecursiveTraverser
     },
-    test: function(fragment) {
+    testCompression: function(fragment) {
       var test = LZW.compress(fragment, M.makeConverter(S.numberLength));
       return [test, LZW.decompress(test, M.reverseConverter, S.numberLength)];
     }
