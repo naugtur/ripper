@@ -276,7 +276,6 @@ describe("ripper", function() {
 
         var res = ripper.paste(ripper.copy(document.getElementById('test')));
 
-console.log(res.getElementsByTagName('q')[0].style.lineHeight);
 
         expect(res.getElementsByTagName('q')[0].style.lineHeight == '13px').toBe(true);
         expect(res.getElementsByTagName('a')[0].style.lineHeight == '14px').toBe(true);

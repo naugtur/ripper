@@ -405,7 +405,7 @@ var Ripper = function(S) {
       htmlContent = tmpdom.innerHTML;
       if(!cssSkipped){
             //no need for style and class
-            htmlContent = htmlContent.replace(/style=("[^"<]*")|('[^'<]*')/gi, '');
+            htmlContent = htmlContent.replace(/\sstyle=("[^"<]*")|('[^'<]*')/gi, '');
           }
     }else{
       scripts = tmpdom.getElementsByTagName('script');
@@ -415,10 +415,10 @@ var Ripper = function(S) {
       }
       htmlContent = tmpdom.innerHTML;
       if(cssSkipped){
-        htmlContent = htmlContent.replace(/(on[^ =]*)=("[^"<]*")|('[^'<]*')/gi, ''); 
+        htmlContent = htmlContent.replace(/\s(on[^ =]*)=("[^"<]*")|('[^'<]*')/gi, ''); 
       }else{
         //no need for style, drop events
-        htmlContent = htmlContent.replace(/(style|on[^ =]*)=("[^"<]*")|('[^'<]*')/gi, '');
+        htmlContent = htmlContent.replace(/\s(style|on[^ =]*)=("[^"<]*")|('[^'<]*')/gi, '');
       }
     }
 
