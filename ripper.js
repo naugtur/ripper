@@ -250,9 +250,9 @@ var Ripper = function(S) {
       var result;
       result = text.replace(/~/g, '~~'); //Not too often I guess
       for (var i = 0, l = dictionary.length; i < l; i += 1) {
-        result.replace(RegExp(dictionary[i], 'g'), '~' + keys[i]);
+        result=result.replace(RegExp(dictionary[i], 'g'), '~' + keys[i]);
       }
-      return result
+      return result;
     }
 
     //decompression
@@ -260,10 +260,10 @@ var Ripper = function(S) {
     function decompress(text) {
       var result = text;
       for (var i = 0, l = dictionary.length; i < l; i += 1) {
-        result.replace(RegExp('~' + keys[i], 'g'), dictionary[i]);
+        result=result.replace(RegExp('~' + keys[i], 'g'), dictionary[i]);
       }
       result.replace(/~~/g, '~');
-      return result
+      return result;
     }
 
     return {
@@ -393,40 +393,40 @@ var Ripper = function(S) {
   }
   
   function mirror(node,preprocess,cssSkipped){
-      var htmlContent, tmpdom, scripts;
+    var htmlContent, tmpdom, scripts;
 
     tmpdom = document.createElement(node.nodeName);
     tmpdom.innerHTML = node.innerHTML;
-     if( typeof(preprocess) == 'function' ){
-            preprocess(tmpdom);
-        }
+    if( typeof(preprocess) == 'function' ){
+      preprocess(tmpdom);
+    }
     
-    htmlContent = tmpdom.innerHTML;
-
-   if(S.keepJS){
-        if(cssSkipped){
+    if(S.keepJS){
+      htmlContent = tmpdom.innerHTML;
+      if(!cssSkipped){
             //no need for style and class
-            htmlContent = htmlContent.replace(/(style)=("[^"<]*")|('[^'<]*')/gi, '');
-        }
+            htmlContent = htmlContent.replace(/style=("[^"<]*")|('[^'<]*')/gi, '');
+          }
     }else{
-        scripts = tmpdom.getElementsByTagName('script');
-        var i = scripts.length;
-        while (i--) {
-          scripts[i].parentNode.removeChild(scripts[i]);
-        }
-        if(cssSkipped){
-          htmlContent = htmlContent.replace(/(on[^ =]*)=("[^"<]*")|('[^'<]*')/gi, ''); 
-        }else{
-          //no need for style and class, drop events
-          htmlContent = htmlContent.replace(/(style|on[^ =]*)=("[^"<]*")|('[^'<]*')/gi, '');
-        }
+      scripts = tmpdom.getElementsByTagName('script');
+      var i = scripts.length;
+      while (i--) {
+        scripts[i].parentNode.removeChild(scripts[i]);
+      }
+      htmlContent = tmpdom.innerHTML;
+      if(cssSkipped){
+        htmlContent = htmlContent.replace(/(on[^ =]*)=("[^"<]*")|('[^'<]*')/gi, ''); 
+      }else{
+        //no need for style, drop events
+        htmlContent = htmlContent.replace(/(style|on[^ =]*)=("[^"<]*")|('[^'<]*')/gi, '');
+      }
     }
 
     //; ignore whitespace
     htmlContent = htmlContent.replace(/\s+/g, ' ');
     
     return htmlContent;
-      
+
   }
   
 
@@ -506,6 +506,7 @@ var Ripper = function(S) {
     tools: {
       extract:extract,
       M: M,
+      Heuristic:Heuristic,
       makeRecursiveTraverser: makeRecursiveTraverser
     },
     testCompression: function(fragment) {

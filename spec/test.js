@@ -15,6 +15,16 @@ describe("ripper", function() {
 
     });
 
+    it('should apply heuristic compression to some words', function() {
+
+
+        var ripper=Ripper(),
+        text='<div align color Arial ...';
+
+        expect(ripper.tools.Heuristic.compress(text)).not.toBe(text);
+
+    });
+
     it('should return different results if heuristic is on', function() {
 
 
@@ -32,8 +42,8 @@ describe("ripper", function() {
         var cp1 = ripper.copy(node);
         var cp2 = ripper2.copy(node);
 
-        expect(cp1 != cp2);
-        expect(cp1.length < cp2.length);
+        expect(cp1 != cp2).toBe(true);
+        expect(cp1.length < cp2.length).toBe(true);
 
     });
 
@@ -86,7 +96,7 @@ describe("ripper", function() {
         expect(copynode !== node);
 
         copynode.innerHTML = '';
-        expect(node.getElementsByTagName('q').length>0);
+        expect(node.getElementsByTagName('q').length>0).toBe(true);
     });
 
     it('should remove scripts and inline style declarations', function() {
@@ -97,12 +107,11 @@ describe("ripper", function() {
           heuristic:true
       });
         
-
         var res = ripper.tools.extract(ripper.copy(document.getElementById('test')));
-        
-        expect(!(/color:red/).test(res.html));
-        expect(!(/alert/).test(res.html));
-        expect(!(/--scripts--/).test(res.html));
+
+        expect((/color.red/).test(res.html)).toBe(false);
+        expect((/alert/).test(res.html)).toBe(false);
+        expect((/--scripts--/).test(res.html)).toBe(false);
 
     });
 
@@ -117,10 +126,10 @@ describe("ripper", function() {
         
 
         var res = ripper.tools.extract(ripper.copy(document.getElementById('test')));
-        
-        expect(!(/color:red/).test(res.html));
-        expect((/alert/).test(res.html));
-        expect((/--scripts--/).test(res.html));
+
+        expect((/color.red/).test(res.html)).toBe(false);
+        expect((/alert/).test(res.html)).toBe(true);
+        expect((/--scripts--/).test(res.html)).toBe(true);
 
     });
 
@@ -134,8 +143,9 @@ describe("ripper", function() {
         
 
         var res = ripper.tools.extract(ripper.copy(document.getElementById('test'),null,true));
-        expect(!res.css);
-        expect((/color:red/).test(res.html));
+        
+        expect(JSON.stringify(res.css)).toBe('{}');
+        expect((/color:red/).test(res.html)).toBe(true);
     });
 
     it('should keep scripts and skip css together too', function() {
@@ -148,10 +158,24 @@ describe("ripper", function() {
       });
 
         var res = ripper.tools.extract(ripper.copy(document.getElementById('test'),null,true));
-        expect(!res.css);
-        expect((/color:red/).test(res.html));
-        expect((/alert/).test(res.html));
-        expect((/--scripts--/).test(res.html));
+        
+        expect(JSON.stringify(res.css)).toBe('{}');
+        expect((/color:red/).test(res.html)).toBe(true);
+        expect((/alert/).test(res.html)).toBe(true);
+        expect((/--scripts--/).test(res.html)).toBe(true);
+
+    });
+
+    it('should not destroy attributes that have "on" in them when removing event handlers from html', function() {
+
+        var ripper=Ripper({
+          dictionary: "abcdefghijklmnopqrstuvwxyz",
+          numberLength: 3,
+          heuristic:true
+      });
+
+        var res = ripper.tools.extract(ripper.copy(document.head));
+        expect((/X-UA-Compatible" content/).test(res.html)).toBe(true);
 
     });
 
@@ -166,7 +190,7 @@ describe("ripper", function() {
         }catch(e){
             error=true;
         }   
-        expect(error);
+        expect(error).toBe(true);
 
     });
 
@@ -185,7 +209,7 @@ describe("ripper", function() {
       });
 
         var node = ripper.paste(ripper.copy(document.getElementById('test')));
-        expect(node.getElementsByTagName('q').length>0);
+        expect(node.getElementsByTagName('q').length>0).toBe(true);
 
     });
 
@@ -199,7 +223,7 @@ describe("ripper", function() {
 
         var res = document.getElementById('res');
         ripper.paste(ripper.copy(document.getElementById('test')),res);
-        expect(res.getElementsByTagName('q').length>0);
+        expect(res.getElementsByTagName('q').length>0).toBe(true);
 
     });
 
@@ -217,7 +241,7 @@ describe("ripper", function() {
             console.log(e);
             error=true;
         }   
-        expect(error);
+        expect(error).toBe(true);
 
         error=false;
         try{
@@ -226,7 +250,7 @@ describe("ripper", function() {
             console.log(e);
             error=true;
         }   
-        expect(error);
+        expect(error).toBe(true);
         
         error=false;
         try{
@@ -235,7 +259,7 @@ describe("ripper", function() {
             console.log(e);
             error=true;
         }   
-        expect(error);
+        expect(error).toBe(true);
         
         
 
@@ -251,8 +275,11 @@ describe("ripper", function() {
       });
 
         var res = ripper.paste(ripper.copy(document.getElementById('test')));
-        expect(res.getElementsByTagName('q')[0].style.color == 'red');
-        expect(res.getElementsByTagName('a')[0].style.color == 'yellow');
+
+console.log(res.getElementsByTagName('q')[0].style.lineHeight);
+
+        expect(res.getElementsByTagName('q')[0].style.lineHeight == '13px').toBe(true);
+        expect(res.getElementsByTagName('a')[0].style.lineHeight == '14px').toBe(true);
 
     });
 
