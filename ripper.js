@@ -12,6 +12,7 @@ var Ripper = function(S) {
   S.numberLength || (S.numberLength = 2);
   S.heuristic || (S.heuristic = false);
   S.keepJS || (S.keepJS = false);
+  S.compressToArray || (S.compressToArray = false);
   //------------------------------------------------------------------- /Math
   var M = (function() {
     var c = (S.dictionary).split(""),
@@ -345,6 +346,17 @@ var Ripper = function(S) {
     }
 
     return {
+      compressToArray: function(txt) {
+        return compress(txt);
+      },
+      decompressFromArray: function(data) {
+        for(var i=0;i<data.length;i+=1){
+          if(data[i]<32){ //nothing less than space makes sense anyway
+            throw "Unexpected entity in decoding";
+          }
+        }
+        return decompress(data);
+      },        
       compress: function(txt, cV) {
         return compress(txt).map(function(a) {
           return cV(a)
@@ -361,7 +373,6 @@ var Ripper = function(S) {
           }
           tmp[tmp.length] = val;
         }
-
         return decompress(tmp);
       }
     };
@@ -397,7 +408,7 @@ var Ripper = function(S) {
 
     tmpdom = document.createElement(node.nodeName);
     tmpdom.innerHTML = node.innerHTML;
-    if( typeof(preprocess) == 'function' ){
+    if( typeof(preprocess) === 'function' ){
       preprocess(tmpdom);
     }
     
@@ -431,7 +442,7 @@ var Ripper = function(S) {
   
 
   function rip(node,preprocess,skipCSS) {
-    var htmlContent, rippedData;
+    var htmlContent, rippedData, compressed;
     
     htmlContent = mirror(node,preprocess,skipCSS);
 
@@ -451,15 +462,25 @@ var Ripper = function(S) {
     if (S.heuristic) {
       fragment = Heuristic.compress(fragment);
     }
-
-    var compressed = LZW.compress(fragment, M.makeConverter(S.numberLength));
+    
+    if (S.compressToArray){
+      compressed = LZW.compressToArray(fragment);
+    }else{
+      compressed = LZW.compress(fragment, M.makeConverter(S.numberLength));
+    }
 
     return compressed;
 
   }
 
   function extract(data){
-    var obj = LZW.decompress(data, M.reverseConverter, S.numberLength);
+    var obj;
+    if (S.compressToArray){
+      obj= LZW.decompressFromArray(data);
+    }else{
+      obj= LZW.decompress(data, M.reverseConverter, S.numberLength);
+    }
+            
     if (S.heuristic) {
       obj = Heuristic.decompress(obj);
     }
