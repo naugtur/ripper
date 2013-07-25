@@ -263,7 +263,7 @@ var Ripper = function(S) {
       for (var i = 0, l = dictionary.length; i < l; i += 1) {
         result=result.replace(RegExp('~' + keys[i], 'g'), dictionary[i]);
       }
-      result.replace(/~~/g, '~');
+      result=result.replace(/~~/g, '~');
       return result;
     }
 

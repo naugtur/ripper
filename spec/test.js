@@ -33,9 +33,20 @@ describe("ripper", function() {
 
 
         var ripper=Ripper(),
-        text='<div align color Arial ...';
+        text='<div align color Arial ~ ...';
 
         expect(ripper.tools.Heuristic.compress(text)).not.toBe(text);
+
+    });
+
+    it('should escape ~ correctly both ways in heuristic compression ', function() {
+
+
+        var ripper=Ripper(),
+        text='<div align color Arial ~ ...';
+
+        expect(ripper.tools.Heuristic.compress(text).indexOf('~~')).not.toEqual(-1);
+        expect(ripper.tools.Heuristic.decompress(ripper.tools.Heuristic.compress(text)).indexOf('~~')).toEqual(-1);
 
     });
 
