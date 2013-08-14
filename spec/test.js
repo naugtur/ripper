@@ -14,14 +14,39 @@ describe("ripper", function() {
         expect((/^[a-z]+$/).test(cp)).toBe(true);
 
     });
+    
+    it('should rip content and save it correctly to array when told to', function() {
+
+
+        var ripper=Ripper({
+          dictionary: "abcdefghijklmnopqrstuvwxyz",
+          numberLength: 3,
+          heuristic:true,
+          compressToArray:true
+        });
+        var cp = ripper.copy(document.getElementById('test'));
+        expect(ripper.tools.extract(cp).html===' <div>test subject</div> <q>asd</q> <a href="" class="testcolor">qwe</a> ').toBe(true);
+
+    });
 
     it('should apply heuristic compression to some words', function() {
 
 
         var ripper=Ripper(),
-        text='<div align color Arial ...';
+        text='<div align color Arial ~ ...';
 
         expect(ripper.tools.Heuristic.compress(text)).not.toBe(text);
+
+    });
+
+    it('should escape ~ correctly both ways in heuristic compression ', function() {
+
+
+        var ripper=Ripper(),
+        text='<div align color Arial ~ ...';
+
+        expect(ripper.tools.Heuristic.compress(text).indexOf('~~')).not.toEqual(-1);
+        expect(ripper.tools.Heuristic.decompress(ripper.tools.Heuristic.compress(text)).indexOf('~~')).toEqual(-1);
 
     });
 

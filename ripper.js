@@ -471,7 +471,6 @@ var Ripper = function(S) {
     if (S.heuristic) {
       fragment = Heuristic.compress(fragment);
     }
-
     if (S.compressToArray){
       compressed = LZW.compressToArray(fragment);
     }else{
