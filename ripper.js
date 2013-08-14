@@ -12,6 +12,7 @@ var Ripper = function(S) {
   S.numberLength || (S.numberLength = 2);
   S.heuristic || (S.heuristic = false);
   S.keepJS || (S.keepJS = false);
+  S.compressToArray || (S.compressToArray = false);
   //------------------------------------------------------------------- /Math
   var M = (function() {
     var c = (S.dictionary).split(""),
@@ -78,7 +79,7 @@ var Ripper = function(S) {
   var CSS = (function() {
 
     var defaultsStore = {}, prefix;
-    
+
     function getVendorPrefix() {
       if (prefix) {
         return prefix;
@@ -120,7 +121,7 @@ var Ripper = function(S) {
       };
       return prop.replace(/\-([a-z])/g, rep);
     };
-    
+
     function getStyleObject(dom) {
       var style, returns = {};
       if (window.getComputedStyle) {
@@ -202,7 +203,7 @@ var Ripper = function(S) {
       } else {
         defaults = memDefaults(nn, '');
       }
-      
+
       for (var i in defaults) {
         if (defaults.hasOwnProperty(i)) {
           if (styles[i] === defaults[i]) {
@@ -262,7 +263,7 @@ var Ripper = function(S) {
       for (var i = 0, l = dictionary.length; i < l; i += 1) {
         result=result.replace(RegExp('~' + keys[i], 'g'), dictionary[i]);
       }
-      result.replace(/~~/g, '~');
+      result=result.replace(/~~/g, '~');
       return result;
     }
 
@@ -345,6 +346,17 @@ var Ripper = function(S) {
     }
 
     return {
+      compressToArray: function(txt) {
+        return compress(txt);
+      },
+      decompressFromArray: function(data) {
+        for(var i=0;i<data.length;i+=1){
+          if(data[i]<32){ //nothing less than space makes sense anyway
+            throw "Unexpected entity in decoding";
+          }
+        }
+        return decompress(data);
+      },        
       compress: function(txt, cV) {
         return compress(txt).map(function(a) {
           return cV(a)
@@ -358,10 +370,9 @@ var Ripper = function(S) {
           val = dV(data.splice(0, chunkSize).join(''));
           if(val<32){ //nothing less than space makes sense anyway
             throw "Unexpected entity in decoding";
-          }
+        }
           tmp[tmp.length] = val;
         }
-
         return decompress(tmp);
       }
     };
@@ -384,66 +395,75 @@ var Ripper = function(S) {
       k = 0;
       x = e.firstChild;
       for (; x; x = x.nextSibling) {
-        if (x !== u && x.nodeType === 1) {
+        if (x !== u && x.nodeType === 1 && (S.keepJS || x.nodeName!=='SCRIPT')) {
           recur(x, id, ++k);
         }
       }
     }
     return recur;
   }
-  
+
   function mirror(node,preprocess,cssSkipped){
-    var htmlContent, tmpdom, scripts;
+      var htmlContent, tmpdom, scripts;
 
     tmpdom = document.createElement(node.nodeName);
-    tmpdom.innerHTML = node.innerHTML;
-    if( typeof(preprocess) == 'function' ){
-      preprocess(tmpdom);
-    }
+    tmpdom = node.cloneNode(true);
+    if( typeof(preprocess) === 'function' ){
+            preprocess(tmpdom);
+        }
     
-    if(S.keepJS){
-      htmlContent = tmpdom.innerHTML;
+   if(S.keepJS){
+    htmlContent = tmpdom.innerHTML;
       if(!cssSkipped){
-            //no need for style and class
+        //no need for style and class
             htmlContent = htmlContent.replace(/\sstyle=("[^"<]*")|('[^'<]*')/gi, '');
-          }
+        }
     }else{
-      scripts = tmpdom.getElementsByTagName('script');
-      var i = scripts.length;
-      while (i--) {
-        scripts[i].parentNode.removeChild(scripts[i]);
-      }
+        scripts = tmpdom.getElementsByTagName('script');
+        var i = scripts.length;
+        while (i--) {
+          scripts[i].parentNode.removeChild(scripts[i]);
+        }
       htmlContent = tmpdom.innerHTML;
-      if(cssSkipped){
+        if(cssSkipped){
         htmlContent = htmlContent.replace(/\s(on[^ =]*)=("[^"<]*")|('[^'<]*')/gi, ''); 
-      }else{
+        }else{
         //no need for style, drop events
         htmlContent = htmlContent.replace(/\s(style|on[^ =]*)=("[^"<]*")|('[^'<]*')/gi, '');
-      }
+    }
     }
 
     //; ignore whitespace
     htmlContent = htmlContent.replace(/\s+/g, ' ');
-    
-    return htmlContent;
 
+    return htmlContent;
+      
   }
   
+  function getAttrs(node){
+      var ret=[];
+      for(var i=0;i<node.attributes.length;i+=1){
+           ret.push({name:node.attributes[i].name,value:node.attributes[i].value});
+      }
+      return ret;
+  }
 
   function rip(node,preprocess,skipCSS) {
-    var htmlContent, rippedData;
+    var htmlContent, rippedData, compressed;
     
     htmlContent = mirror(node,preprocess,skipCSS);
 
     rippedData = {
       html: htmlContent,
+      attrs:getAttrs(node),
+      name:node.nodeName,
       css: {}
     };
     if(!skipCSS){
-        //store CSS recursively
-        makeRecursiveTraverser(function(e, id) {
-          rippedData.css[id] = CSS.get(e);
-        })(node, '', 1);
+    //store CSS recursively
+    makeRecursiveTraverser(function(e, id) {
+      rippedData.css[id] = CSS.get(e);
+    })(node, '', 1);
     }
 
     var fragment = JSON.stringify(rippedData);
@@ -452,14 +472,24 @@ var Ripper = function(S) {
       fragment = Heuristic.compress(fragment);
     }
 
-    var compressed = LZW.compress(fragment, M.makeConverter(S.numberLength));
+    if (S.compressToArray){
+      compressed = LZW.compressToArray(fragment);
+    }else{
+      compressed = LZW.compress(fragment, M.makeConverter(S.numberLength));
+    }
 
     return compressed;
 
   }
 
   function extract(data){
-    var obj = LZW.decompress(data, M.reverseConverter, S.numberLength);
+    var obj;
+    if (S.compressToArray){
+      obj= LZW.decompressFromArray(data);
+    }else{
+      obj= LZW.decompress(data, M.reverseConverter, S.numberLength);
+    }
+            
     if (S.heuristic) {
       obj = Heuristic.decompress(obj);
     }
@@ -468,20 +498,29 @@ var Ripper = function(S) {
   }
 
   function put(data,target) {
-    var node,findTR,nodeName = 'div',
-    obj = extract(data);
+    var node,findTR,
+    obj = extract(data),
+    nodeName = (obj.name)?obj.name:'div';
+    
     
     if(target){
       node=target;
     }else{
-      //if code starts from tr, it needs a table tag to work
-      findTR = obj.html.substring(0,5);
-      if(findTR.indexOf('<tr')>-1 || findTR.indexOf('<th')>-1 || findTR.indexOf('<td')>-1 ){
-        nodeName = 'table';
-      }
-      node = document.createElement(nodeName);
+    //if code starts from tr, it needs a table tag to work
+    findTR = obj.html.substring(0,5);
+    if(findTR.indexOf('<tr')>-1 || findTR.indexOf('<th')>-1 || findTR.indexOf('<td')>-1 ){
+      nodeName = 'table';
+    }
+    node = document.createElement(nodeName);
     }
     node.innerHTML = obj.html;
+    
+    //add attributes to node
+    if(obj.attrs){
+      for(var i=0;i<obj.attrs.length;i+=1){
+        node.setAttribute(obj.attrs[i].name,obj.attrs[i].value);
+      } 
+    }
     //console.log(obj);
     //set css back, recursively
     makeRecursiveTraverser(function(e, id) {
