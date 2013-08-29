@@ -378,6 +378,104 @@ var Ripper = function(S) {
     };
 
   })();
+  
+  //-------------------------------------------------------------------CSS specific compression
+  var CSSompress = (function() {
+        function compress(css) {
+            var props = [],
+                    vals = [],
+                    compressed = {};
+
+            for (var key in css) {
+                if (css.hasOwnProperty(key)) {
+                    compressed[key] = [];
+
+                    for (var prop in css[key]) {
+                        if (css[key].hasOwnProperty(prop)) {
+                            var val = css[key][prop];
+
+                            var propIndex = props.indexOf(prop),
+                                    valIndex = vals.indexOf(val);
+
+                            if (propIndex < 0) {
+                                propIndex = props.length;
+                                props[propIndex] = prop;
+                            }
+
+                            if (valIndex < 0) {
+                                valIndex = vals.length;
+                                vals[valIndex] = val;
+                            }
+
+                            compressed[key].push(propIndex, valIndex);
+                        }
+                    }
+                }
+            }
+
+            return {
+                props: props,
+                vals: vals,
+                res: compressed
+            };
+        }
+
+        function decompress(obj) {
+            var props = obj.props,
+                vals = obj.vals,
+                res = obj.res;
+
+            var decompressed = {};
+
+            for (var key in res) {
+                if (res.hasOwnProperty(key)) {
+                    decompressed[key] = {};
+
+                    for (var i = 0, maxi = res[key].length; i < maxi; i += 2) {
+                        var propIndex = res[key][i],
+                                valIndex = res[key][i + 1];
+
+                        var prop = props[propIndex],
+                                val = vals[valIndex];
+
+                        decompressed[key][prop] = val;
+                    }
+                }
+            }
+
+            return decompressed;
+        }
+
+        return {
+            compress: function(data) {
+                if ((typeof data) !== 'object') {
+                    try {
+                        data = JSON.parse(data);
+                    } catch (e) {
+                        return data;
+                    }
+                }
+                
+                return compress(data);
+            },
+            decompress: function(data) {
+                if ((typeof data) !== 'object') {
+                    try {
+                        data = JSON.parse(data);
+                    } catch (e) {
+                        
+                    }
+                }
+                
+                if(!data.res) {
+                    return data;
+                } else {
+                    return decompress(data);
+                }
+            }
+        }
+    })();
+  
 
   //------------------------------------------------------------------- /Main
   //creates a function that runs a callback for every node, recursively, and provides identification
@@ -464,6 +562,8 @@ var Ripper = function(S) {
     makeRecursiveTraverser(function(e, id) {
       rippedData.css[id] = CSS.get(e);
     })(node, '', 1);
+                
+      rippedData.css = CSSompress.compress(rippedData.css);
     }
 
     var fragment = JSON.stringify(rippedData);
@@ -493,6 +593,11 @@ var Ripper = function(S) {
       obj = Heuristic.decompress(obj);
     }
     obj = JSON.parse(obj);
+    
+    if(obj.css) {
+      obj.css = CSSompress.decompress(obj.css);
+    }
+    
     return obj;
   }
 
